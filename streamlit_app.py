@@ -32,7 +32,7 @@ if total_budget > 100:
 # 📌 **Définition du modèle de croissance dynamique**
 def system(t, y):
     PIB, R, D = y
-    R_effectif = tau * PIB  # Recettes fiscales
+    R_effectif = min(tau * PIB, PIB)  # Correction ici pour éviter R > PIB
     croissance = 0.3 * (education / 100) * R_effectif \
                + 0.2 * (sante / 100) * R_effectif \
                + 0.15 * (infrastructure / 100) * R_effectif \
@@ -41,7 +41,7 @@ def system(t, y):
     
     dPIB_dt = PIB * croissance / 100
     dR_dt = R_effectif - 25  # Dépenses publiques fixes pour stabiliser
-    dD_dt = 25 - R_effectif  # Dette évoluant en fonction des recettes fiscales
+    dD_dt = max(25 - R_effectif, 0)  # Correction pour éviter une dette négative
     return [dPIB_dt, dR_dt, dD_dt]
 
 # 📌 **Résolution du modèle sur 50 ans**
@@ -89,3 +89,5 @@ st.markdown("""
     - **Scénarios de crises économiques et réformes fiscales.**  
     - **Comparaison entre plusieurs stratégies fiscales.**  
 """)
+
+st.markdown("💡 **Que veux-tu améliorer ou ajouter à ce simulateur ?**")
