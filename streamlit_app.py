@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Configuration de la page
-st.set_page_config(page_title="Modèle Simplifié de Fiscalité Optimale", layout="wide")
+st.set_page_config(page_title="Modèle de Fiscalité Optimale", layout="wide")
 
 # Titre de l'application
-st.title("📊 Modèle Simplifié de Fiscalité Optimale")
+st.title("📊 Modèle de Fiscalité Optimale")
 
 st.markdown("""
 Ce simulateur permet d'analyser l'effet du taux de taxation sur :
@@ -22,7 +22,8 @@ tau_opt = 26  # Taux de fiscalité optimisant la croissance (%)
 alpha = 0.05  # Sensibilité de la croissance au taux de fiscalité
 I_min = 0.25  # Indice de Gini minimal atteignable
 S = 0.2  # Sensibilité fiscale aux inégalités
-tau_seuil = 35  # Seuil d'exode fiscal (%)
+tau_seuil = 30  # Seuil d'exode fiscal (%)
+delta = 0.01  # Sensibilité de la base fiscale à l'exode
 PIB_initial = 100  # PIB initial
 
 # 📌 Ajout des sliders pour ajuster les paramètres
@@ -40,7 +41,7 @@ if total_budget > 100:
     st.sidebar.warning("⚠️ La somme des allocations dépasse 100% des recettes fiscales ! Ajustez les valeurs.")
     st.stop()
 
-# 📌 Calcul des fonctions du modèle simplifié
+# 📌 Calcul des fonctions du modèle
 
 # Croissance du PIB
 g_tau = g_max - alpha * (tau - tau_opt) ** 2
@@ -48,8 +49,8 @@ g_tau = g_max - alpha * (tau - tau_opt) ** 2
 # Indice de Gini
 I_tau = I_min + S / (tau - 20) if tau > 20 else 1  # Évite une division par zéro
 
-# Proportion de la base fiscale restante (exode fiscal)
-M_tau = 1 - tau / tau_seuil
+# Proportion de la base fiscale restante (exode fiscal) - mise à jour avec la nouvelle équation
+M_tau = max(1 - delta * (tau - tau_seuil) ** 2, 0)  # Assurer que M_tau ne devient pas négatif
 
 # Recettes fiscales effectives
 R_effectif = max(M_tau * tau * PIB_initial, 0)  # Assurer que R_effectif ≥ 0
