@@ -55,16 +55,32 @@ M_tau = max(1 - delta * (tau - tau_seuil) ** 2, 0)  # Assurer que M_tau ne devie
 # Recettes fiscales effectives
 R_effectif = max(M_tau * tau * PIB_initial, 0)  # Assurer que R_effectif ≥ 0
 
-# 📊 Affichage des résultats
+# 📊 Affichage des résultats sous forme de 4 graphiques distincts
 st.subheader("📊 Résultats de la Simulation")
 
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.bar(["Croissance du PIB (%)", "Recettes Fiscales (% PIB)", "Indice de Gini", "Exode Fiscal (%)"],
-       [g_tau, R_effectif, I_tau, (1 - M_tau) * 100],
-       color=['blue', 'green', 'red', 'purple'])
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))
 
-ax.set_ylabel("Valeurs")
-ax.set_title("Impact de la Fiscalité sur l'Économie")
+# Graphique 1 : Croissance du PIB
+axs[0, 0].bar(["Croissance du PIB"], [g_tau], color='blue')
+axs[0, 0].set_ylabel("Croissance (%)")
+axs[0, 0].set_title("📈 Croissance du PIB")
+
+# Graphique 2 : Recettes fiscales
+axs[0, 1].bar(["Recettes Fiscales"], [R_effectif], color='green')
+axs[0, 1].set_ylabel("Recettes (% du PIB)")
+axs[0, 1].set_title("💰 Recettes Fiscales")
+
+# Graphique 3 : Indice de Gini (Inégalités)
+axs[1, 0].bar(["Indice de Gini"], [I_tau], color='red')
+axs[1, 0].set_ylabel("Indice de Gini")
+axs[1, 0].set_title("⚖️ Inégalités (Indice de Gini)")
+
+# Graphique 4 : Exode Fiscal
+axs[1, 1].bar(["Exode Fiscal"], [(1 - M_tau) * 100], color='purple')
+axs[1, 1].set_ylabel("Exode Fiscal (%)")
+axs[1, 1].set_title("🏦 Exode Fiscal")
+
+plt.tight_layout()
 st.pyplot(fig)
 
 # 📌 Interprétation des résultats
