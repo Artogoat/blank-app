@@ -1,124 +1,115 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
+import random
 
 # Configuration de la page
-st.set_page_config(page_title="Modèle de Fiscalité Optimale", layout="wide")
+st.set_page_config(page_title="Simulation Économique - Banque Centrale", layout="wide")
 
-# Titre de l'application
-st.title("📊 Modèle de Fiscalité Optimale")
+# Initialisation du jeu
+if "year" not in st.session_state:
+    st.session_state.year = 2025
+    st.session_state.PIB = 1000  # PIB initial (en milliards)
+    st.session_state.inflation = 2.0  # Inflation en %
+    st.session_state.debt = 500  # Dette publique initiale (milliards)
+    st.session_state.tax_rate = 25  # Taux de taxation initial (%)
+    st.session_state.budget_allocation = {"Éducation": 25, "Santé": 25, "Infrastructures": 25, "Transferts sociaux": 25}
+    st.session_state.events = []
+    st.session_state.history = []
 
-st.markdown("""
-Ce simulateur permet d'analyser l'effet du taux de taxation sur :
-- 📈 La croissance du PIB
-- 💰 Les recettes fiscales effectives
-- 🏦 L'exode fiscal
-- ⚖️ Les inégalités (indice de Gini)
-- 📊 Prévisions sur 5 ans de l'évolution du PIB et des inégalités
-""")
+# Interface utilisateur
+st.title("🏦 Simulation Économique - Banque Centrale")
 
-# Paramètres globaux du modèle
-g_max = 2.5  # Croissance maximale atteignable (%)
-tau_opt = 26  # Taux de fiscalité optimisant la croissance (%)
-alpha = 0.05  # Sensibilité de la croissance au taux de fiscalité
-I_min = 0.25  # Indice de Gini minimal atteignable
-S = 0.2  # Sensibilité fiscale aux inégalités
-tau_seuil = 30  # Seuil d'exode fiscal (%)
-delta = 0.01  # Sensibilité de la base fiscale à l'exode
-PIB_initial = 100  # PIB initial
+st.markdown(f"**📅 Année : {st.session_state.year}**")
 
-# 📌 Ajout des sliders pour ajuster les paramètres
-st.sidebar.header("⚙️ Paramètres de Simulation")
+# Variables économiques actuelles
+st.subheader("📊 Indicateurs économiques actuels")
+st.markdown(f"- **PIB :** {st.session_state.PIB:.2f} milliards 💰")
+st.markdown(f"- **Inflation :** {st.session_state.inflation:.2f}% 📈")
+st.markdown(f"- **Dette publique :** {st.session_state.debt:.2f} milliards 💳")
+st.markdown(f"- **Taux de taxation :** {st.session_state.tax_rate}% 💸")
 
-tau = st.sidebar.slider("📈 Taux de Taxation (% du PIB)", min_value=10, max_value=50, value=26)
-education = st.sidebar.slider("🏫 Budget Éducation (%)", min_value=5, max_value=40, value=27)
-sante = st.sidebar.slider("🏥 Budget Santé (%)", min_value=5, max_value=40, value=26)
-infrastructure = st.sidebar.slider("🚧 Budget Infrastructures (%)", min_value=5, max_value=30, value=13)
-transferts_sociaux = st.sidebar.slider("🤝 Budget Transferts Sociaux (%)", min_value=1, max_value=20, value=5)
+# Ajustement des politiques économiques
+st.sidebar.header("⚙️ Décisions économiques")
+tax_rate = st.sidebar.slider("💰 Taux de taxation (%)", 10, 50, st.session_state.tax_rate)
 
-# Vérification que la somme des budgets ne dépasse pas 100%
-total_budget = education + sante + infrastructure + transferts_sociaux
-if total_budget > 100:
-    st.sidebar.warning("⚠️ La somme des allocations dépasse 100% des recettes fiscales ! Ajustez les valeurs.")
+budget_education = st.sidebar.slider("🏫 Budget Éducation (%)", 0, 50, st.session_state.budget_allocation["Éducation"])
+budget_sante = st.sidebar.slider("🏥 Budget Santé (%)", 0, 50, st.session_state.budget_allocation["Santé"])
+budget_infra = st.sidebar.slider("🚧 Budget Infrastructures (%)", 0, 50, st.session_state.budget_allocation["Infrastructures"])
+budget_transferts = st.sidebar.slider("🤝 Budget Transferts sociaux (%)", 0, 50, st.session_state.budget_allocation["Transferts sociaux"])
+
+# Vérification que le budget total ne dépasse pas 100%
+if budget_education + budget_sante + budget_infra + budget_transferts > 100:
+    st.sidebar.warning("⚠️ La somme des budgets dépasse 100% ! Ajustez vos valeurs.")
     st.stop()
 
-# 📌 Calcul des fonctions du modèle
+# Bouton pour appliquer les décisions et passer à l'année suivante
+if st.button("📅 Appliquer les décisions et avancer d'une année"):
 
-# Croissance du PIB
-g_tau = g_max - alpha * (tau - tau_opt) ** 2
+    # Calcul de la croissance du PIB
+    croissance = (tax_rate / 50) * 3  # Hypothèse de croissance liée aux taxes (simplifié)
+    croissance += (budget_education + budget_sante + budget_infra) * 0.02  # Contribution des investissements publics
 
-# Indice de Gini
-I_tau = I_min + S / (tau - 20) if tau > 20 else 1  # Évite une division par zéro
+    # Effets de l'inflation et de la dette
+    inflation_impact = np.clip(st.session_state.inflation * 0.05, -1, 1)
+    dette_impact = np.clip(st.session_state.debt / 1000, -2, 2)
+    
+    # Calcul final de la croissance économique
+    croissance_finale = max(0, croissance - inflation_impact - dette_impact)
+    st.session_state.PIB *= (1 + croissance_finale / 100)
 
-# Proportion de la base fiscale restante (exode fiscal) - mise à jour avec la nouvelle équation
-M_tau = max(1 - delta * (tau - tau_seuil) ** 2, 0)  # Assurer que M_tau ne devient pas négatif
+    # Mise à jour de l'inflation (impact des budgets et de la dette)
+    st.session_state.inflation += (tax_rate - 25) * 0.05 - (budget_education + budget_sante) * 0.02 + dette_impact * 0.1
+    st.session_state.inflation = max(0, st.session_state.inflation)  # Évite l'inflation négative
 
-# Recettes fiscales effectives
-R_effectif = max(M_tau * tau * PIB_initial, 0)  # Assurer que R_effectif ≥ 0
+    # Mise à jour de la dette publique (dépenses vs recettes fiscales)
+    recettes_fiscales = (tax_rate / 100) * st.session_state.PIB
+    depenses = (budget_education + budget_sante + budget_infra + budget_transferts) / 100 * st.session_state.PIB
+    st.session_state.debt += depenses - recettes_fiscales
 
-# 📊 Affichage des résultats sous forme de 4 graphiques distincts avec échelle fixe
-st.subheader("📊 Résultats de la Simulation")
+    # Événements aléatoires tous les 10 ans
+    if st.session_state.year % 10 == 0:
+        events_list = [
+            ("📉 Récession mondiale", -2),
+            ("💡 Révolution technologique", +2),
+            ("💰 Boom des exportations", +3),
+            ("🚨 Crise financière", -3),
+            ("🏭 Effondrement d'un secteur industriel", -2),
+        ]
+        event = random.choice(events_list)
+        st.session_state.events.append((st.session_state.year, event[0]))
+        st.session_state.PIB *= (1 + event[1] / 100)
 
-fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    # Sauvegarde des décisions
+    st.session_state.history.append({
+        "Année": st.session_state.year,
+        "PIB": st.session_state.PIB,
+        "Inflation": st.session_state.inflation,
+        "Dette": st.session_state.debt,
+        "Taxation": tax_rate,
+        "Éducation": budget_education,
+        "Santé": budget_sante,
+        "Infrastructures": budget_infra,
+        "Transferts": budget_transferts
+    })
 
-# Graphique 1 : Croissance du PIB
-axs[0, 0].bar(["Croissance du PIB"], [g_tau], color='blue')
-axs[0, 0].set_ylim(0, g_max)  # Échelle fixe
-axs[0, 0].set_ylabel("Croissance (%)")
-axs[0, 0].set_title("📈 Croissance du PIB")
+    # Mise à jour des valeurs stockées
+    st.session_state.year += 1
+    st.session_state.tax_rate = tax_rate
+    st.session_state.budget_allocation = {
+        "Éducation": budget_education,
+        "Santé": budget_sante,
+        "Infrastructures": budget_infra,
+        "Transferts sociaux": budget_transferts
+    }
 
-# Graphique 2 : Recettes fiscales
-axs[0, 1].bar(["Recettes Fiscales"], [R_effectif], color='green')
-axs[0, 1].set_ylim(0, 50)  # Échelle fixe
-axs[0, 1].set_ylabel("Recettes (% du PIB)")
-axs[0, 1].set_title("💰 Recettes Fiscales")
+# 📊 Affichage de l'historique
+st.subheader("📜 Historique des décisions économiques")
+st.write(st.session_state.history)
 
-# Graphique 3 : Indice de Gini (Inégalités)
-axs[1, 0].bar(["Indice de Gini"], [I_tau], color='red')
-axs[1, 0].set_ylim(0, 1)  # Échelle fixe
-axs[1, 0].set_ylabel("Indice de Gini")
-axs[1, 0].set_title("⚖️ Inégalités (Indice de Gini)")
+# 📢 Affichage des événements économiques
+if st.session_state.events:
+    st.subheader("⚠️ Événements économiques passés")
+    for year, event in st.session_state.events:
+        st.markdown(f"**{year}** : {event}")
 
-# Graphique 4 : Exode Fiscal
-axs[1, 1].bar(["Exode Fiscal"], [(1 - M_tau) * 100], color='purple')
-axs[1, 1].set_ylim(0, 100)  # Échelle fixe
-axs[1, 1].set_ylabel("Exode Fiscal (%)")
-axs[1, 1].set_title("🏦 Exode Fiscal")
-
-plt.tight_layout()
-st.pyplot(fig)
-
-# 📈 Prévisions sur 5 ans de l'évolution du PIB et des inégalités
-st.subheader("📊 Prévisions sur 5 ans")
-
-years = np.arange(0, 6)  # Période de prévision
-PIB_evolution = PIB_initial * (1 + g_tau / 100) ** years  # Projection du PIB avec croissance
-I_evolution = I_tau - 0.01 * years  # Hypothèse d'amélioration des inégalités
-
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(years, PIB_evolution, label="📈 PIB", color='blue', marker='o')
-ax.set_xlabel("Années")
-ax.set_ylabel("PIB")
-ax.set_title("Évolution du PIB sur 5 ans")
-ax.legend()
-ax.grid(True)
-st.pyplot(fig)
-
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(years, I_evolution, label="⚖️ Indice de Gini", color='red', marker='o')
-ax.set_xlabel("Années")
-ax.set_ylabel("Indice de Gini")
-ax.set_title("Évolution des Inégalités sur 5 ans")
-ax.legend()
-ax.grid(True)
-st.pyplot(fig)
-
-# 📌 Interprétation des résultats
-st.markdown(f"""
-- 📈 **Croissance du PIB :** {g_tau:.2f}%  
-- 💰 **Recettes fiscales effectives :** {R_effectif:.2f}% du PIB  
-- ⚖️ **Indice de Gini (inégalités) :** {I_tau:.2f}  
-- 🏦 **Exode Fiscal :** {(1 - M_tau) * 100:.2f}%  
-""")
-
-st.markdown("💡 **Que veux-tu améliorer ou tester dans ce modèle ?**")
+st.markdown("💡 **Que veux-tu améliorer ou ajouter à ce jeu ?** 🚀")
