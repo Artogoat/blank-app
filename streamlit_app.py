@@ -9,38 +9,46 @@ st.set_page_config(page_title="Simulateur Fiscal", layout="wide")
 # Titre du projet
 st.title("📊 Simulateur des Effets de la Fiscalité sur l'Économie")
 
-st.markdown(
-    """
+st.markdown("""
     Ce simulateur permet d'analyser l'impact de la fiscalité sur la croissance du PIB, 
     les recettes fiscales, la dette publique et l'inégalité des revenus.
-    """
-)
+""")
 
-# Sidebar pour les paramètres
-st.sidebar.header("Paramètres de Simulation")
+# 📌 **Ajout des sliders pour permettre l'interactivité**
+st.sidebar.header("⚙️ Paramètres de Simulation")
 
-# Sliders pour ajuster les variables fiscales
-tau = st.sidebar.slider("📈 Taux de Fiscalité (% du PIB)", min_value=10, max_value=50, value=26)
-gamma = st.sidebar.slider("💰 Élasticité de l'exode fiscal", min_value=0.1, max_value=2.0, value=0.5)
-education = st.sidebar.slider("🏫 Budget alloué à l'éducation (%)", min_value=10, max_value=40, value=27)
-sante = st.sidebar.slider("🏥 Budget alloué à la santé (%)", min_value=10, max_value=40, value=26)
+tau = st.sidebar.slider("📈 Taux de Taxation (% du PIB)", min_value=10, max_value=50, value=26)
+education = st.sidebar.slider("🏫 Budget Éducation (%)", min_value=5, max_value=40, value=27)
+sante = st.sidebar.slider("🏥 Budget Santé (%)", min_value=5, max_value=40, value=26)
+infrastructure = st.sidebar.slider("🚧 Budget Infrastructures (%)", min_value=5, max_value=30, value=13)
+transferts_sociaux = st.sidebar.slider("🤝 Budget Transferts Sociaux (%)", min_value=1, max_value=20, value=5)
 
-# Définition du modèle de croissance dynamique
-def M(tau):
-    return 1 / (1 + np.exp(gamma * (tau - 35))) - 1 / (1 + np.exp(gamma * (22 - tau)))
+# Assurer que la somme ne dépasse pas 100%
+total_budget = education + sante + infrastructure + transferts_sociaux
+if total_budget > 100:
+    st.sidebar.warning("⚠️ La somme des allocations dépasse 100% des recettes fiscales ! Ajustez les valeurs.")
+    st.stop()
 
+# 📌 **Définition du modèle de croissance dynamique**
 def system(t, y):
     PIB, R, D = y
-    M_tau = M(tau)
-    R_effectif = tau * PIB * M_tau
-    croissance = 0.3 * (education/100) * R_effectif + 0.2 * (sante/100) * R_effectif - 0.05 * (tau - 26) ** 2
-    return [PIB * croissance / 100, R_effectif - 25, 25 - R_effectif]
+    R_effectif = tau * PIB  # Recettes fiscales
+    croissance = 0.3 * (education / 100) * R_effectif \
+               + 0.2 * (sante / 100) * R_effectif \
+               + 0.15 * (infrastructure / 100) * R_effectif \
+               + 0.1 * (transferts_sociaux / 100) * R_effectif \
+               - 0.05 * (tau - 26) ** 2  # Effet négatif si taxation trop élevée
+    
+    dPIB_dt = PIB * croissance / 100
+    dR_dt = R_effectif - 25  # Dépenses publiques fixes pour stabiliser
+    dD_dt = 25 - R_effectif  # Dette évoluant en fonction des recettes fiscales
+    return [dPIB_dt, dR_dt, dD_dt]
 
-# Résolution du modèle sur 50 ans
+# 📌 **Résolution du modèle sur 50 ans**
 t_eval = np.linspace(0, 50, 500)
 sol = solve_ivp(system, [0, 50], [100, tau * 100, 50], t_eval=t_eval)
 
-# Affichage des résultats sous forme de graphiques interactifs
+# 📌 **Affichage des résultats sous forme de graphiques interactifs**
 st.subheader("📊 Résultats de la Simulation")
 
 fig, ax = plt.subplots(figsize=(10, 5))
@@ -54,38 +62,30 @@ ax.legend()
 ax.grid(True)
 st.pyplot(fig)
 
-# Ajout de commentaires d'interprétation
-st.markdown(
-    """
-    - 📈 **Un taux de fiscalité trop élevé (>35%) entraîne une fuite des capitaux et une stagnation de la croissance.**  
-    - 💰 **Un taux inférieur à 22% stimule l’attraction des investissements, mais peut créer un déficit budgétaire.**  
-    - 🏫 **Les investissements dans l’éducation et la santé augmentent la croissance à long terme.**  
-    """
-)
+# 📌 **Ajout d'une interprétation des résultats**
+st.markdown("""
+    - 📈 **Un taux de taxation trop élevé (>35%) entraîne une fuite des capitaux et ralentit la croissance.**  
+    - 💰 **Un taux inférieur à 22% stimule l’investissement, mais peut creuser la dette.**  
+    - 🏫 **Les investissements en éducation et santé augmentent la croissance à long terme.**  
+""")
 
-# Ajout d'une section pour comparer avec des pays réels
+# 📌 **Comparaison avec des pays réels**
 st.subheader("🌍 Comparaison avec les Données Réelles")
 
-st.markdown(
-    """
+st.markdown("""
     | Pays       | Taux Fiscal (% PIB) | Croissance du PIB | Dette Publique (% PIB) |
     |------------|--------------------|-------------------|------------------------|
     | 🇫🇷 France | 47%                 | 1.5%              | 112%                   |
     | 🇨🇭 Suisse | 27%                 | 2.0%              | 41%                    |
     | 🇺🇸 USA    | 24%                 | 2.5%              | 98%                    |
-    """
-)
+""")
 
 st.markdown("Ces chiffres permettent de mieux comprendre les choix fiscaux et leurs impacts à long terme.")
 
-# Proposition d'amélioration du modèle
+# 📌 **Améliorations possibles**
 st.subheader("🚀 Prochaines Améliorations")
-st.markdown(
-    """
-    - **Intégration de données en temps réel via l'API OCDE/FMI.**  
-    - **Ajout de scénarios économiques (crises, réformes fiscales).**  
-    - **Personnalisation avancée pour comparer plusieurs pays.**  
-    """
-)
-
-st.markdown("💡 **Que veux-tu améliorer ou ajouter à ce simulateur ?**")
+st.markdown("""
+    - **Ajout de prévisions IA sur les impacts des politiques fiscales.**  
+    - **Scénarios de crises économiques et réformes fiscales.**  
+    - **Comparaison entre plusieurs stratégies fiscales.**  
+""")
