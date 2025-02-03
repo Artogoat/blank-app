@@ -14,6 +14,7 @@ Ce simulateur permet d'analyser l'effet du taux de taxation sur :
 - 💰 Les recettes fiscales effectives
 - 🏦 L'exode fiscal
 - ⚖️ Les inégalités (indice de Gini)
+- 📊 Prévisions sur 5 ans de l'évolution du PIB et des inégalités
 """)
 
 # Paramètres globaux du modèle
@@ -55,32 +56,61 @@ M_tau = max(1 - delta * (tau - tau_seuil) ** 2, 0)  # Assurer que M_tau ne devie
 # Recettes fiscales effectives
 R_effectif = max(M_tau * tau * PIB_initial, 0)  # Assurer que R_effectif ≥ 0
 
-# 📊 Affichage des résultats sous forme de 4 graphiques distincts
+# 📊 Affichage des résultats sous forme de 4 graphiques distincts avec échelle fixe
 st.subheader("📊 Résultats de la Simulation")
 
 fig, axs = plt.subplots(2, 2, figsize=(12, 8))
 
 # Graphique 1 : Croissance du PIB
 axs[0, 0].bar(["Croissance du PIB"], [g_tau], color='blue')
+axs[0, 0].set_ylim(0, g_max)  # Échelle fixe
 axs[0, 0].set_ylabel("Croissance (%)")
 axs[0, 0].set_title("📈 Croissance du PIB")
 
 # Graphique 2 : Recettes fiscales
 axs[0, 1].bar(["Recettes Fiscales"], [R_effectif], color='green')
+axs[0, 1].set_ylim(0, 50)  # Échelle fixe
 axs[0, 1].set_ylabel("Recettes (% du PIB)")
 axs[0, 1].set_title("💰 Recettes Fiscales")
 
 # Graphique 3 : Indice de Gini (Inégalités)
 axs[1, 0].bar(["Indice de Gini"], [I_tau], color='red')
+axs[1, 0].set_ylim(0, 1)  # Échelle fixe
 axs[1, 0].set_ylabel("Indice de Gini")
 axs[1, 0].set_title("⚖️ Inégalités (Indice de Gini)")
 
 # Graphique 4 : Exode Fiscal
 axs[1, 1].bar(["Exode Fiscal"], [(1 - M_tau) * 100], color='purple')
+axs[1, 1].set_ylim(0, 100)  # Échelle fixe
 axs[1, 1].set_ylabel("Exode Fiscal (%)")
 axs[1, 1].set_title("🏦 Exode Fiscal")
 
 plt.tight_layout()
+st.pyplot(fig)
+
+# 📈 Prévisions sur 5 ans de l'évolution du PIB et des inégalités
+st.subheader("📊 Prévisions sur 5 ans")
+
+years = np.arange(0, 6)  # Période de prévision
+PIB_evolution = PIB_initial * (1 + g_tau / 100) ** years  # Projection du PIB avec croissance
+I_evolution = I_tau - 0.01 * years  # Hypothèse d'amélioration des inégalités
+
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.plot(years, PIB_evolution, label="📈 PIB", color='blue', marker='o')
+ax.set_xlabel("Années")
+ax.set_ylabel("PIB")
+ax.set_title("Évolution du PIB sur 5 ans")
+ax.legend()
+ax.grid(True)
+st.pyplot(fig)
+
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.plot(years, I_evolution, label="⚖️ Indice de Gini", color='red', marker='o')
+ax.set_xlabel("Années")
+ax.set_ylabel("Indice de Gini")
+ax.set_title("Évolution des Inégalités sur 5 ans")
+ax.legend()
+ax.grid(True)
 st.pyplot(fig)
 
 # 📌 Interprétation des résultats
